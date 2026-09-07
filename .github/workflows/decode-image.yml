@@ -57,6 +57,11 @@ jobs:
               echo "Skipping invalid multipart payload: $name"
             fi
           done
+          bundles=(images/*.tar.gz)
+          for bundle in "${bundles[@]}"; do
+            tar -xzf "$bundle" -C images
+            rm -f "$bundle"
+          done
 
       - name: Convert SVG eyecatches to WebP
         shell: bash
