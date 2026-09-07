@@ -30,7 +30,7 @@ jobs:
           set -euo pipefail
           mkdir -p images incoming_parts
           shopt -s nullglob
-          files=(incoming/*.b64)
+          files=(incoming/*.b64 incoming_parts/*.b64)
           for payload in "${files[@]}"; do
             name="$(basename "$payload" .b64)"
             if base64 -d "$payload" > "images/$name"; then
@@ -46,6 +46,7 @@ jobs:
             parts=(incoming_parts/"$name".part*)
             if [ ${#parts[@]} -eq 0 ]; then
               echo "No multipart chunks found for $name"
+              rm -f "$manifest"
               continue
             fi
             cat "${parts[@]}" > "/tmp/$name.b64"
