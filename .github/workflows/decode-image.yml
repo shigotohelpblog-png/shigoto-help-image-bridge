@@ -4,6 +4,7 @@ on:
   push:
     paths:
       - 'incoming/*.b64'
+      - 'incoming/*.parts'
       - 'images/*.svg'
 
 permissions:
@@ -27,7 +28,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          mkdir -p images
+          mkdir -p images incoming_parts
           shopt -s nullglob
           files=(incoming/*.b64)
           for payload in "${files[@]}"; do
@@ -37,6 +38,22 @@ jobs:
             else
               rm -f "images/$name"
               echo "Skipping invalid base64 payload: $payload"
+            fi
+          done
+          manifests=(incoming/*.parts)
+          for manifest in "${manifests[@]}"; do
+            name="$(basename "$manifest" .parts)"
+            parts=(incoming_parts/"$name".part*)
+            if [ ${#parts[@]} -eq 0 ]; then
+              echo "No multipart chunks found for $name"
+              continue
+            fi
+            cat "${parts[@]}" > "/tmp/$name.b64"
+            if base64 -d "/tmp/$name.b64" > "images/$name"; then
+              rm -f "$manifest" "${parts[@]}" "/tmp/$name.b64"
+            else
+              rm -f "images/$name" "/tmp/$name.b64"
+              echo "Skipping invalid multipart payload: $name"
             fi
           done
 
@@ -62,6 +79,6 @@ jobs:
           fi
           git config user.name "shigoto-help-image-bridge-bot"
           git config user.email "actions@users.noreply.github.com"
-          git add images incoming
+          git add images incoming incoming_parts
           git commit -m "Build image assets"
           git push
